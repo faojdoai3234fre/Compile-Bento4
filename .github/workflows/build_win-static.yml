@@ -55,6 +55,7 @@ jobs:
         rmdir /s /q build
         cmake -B build -D CMAKE_BUILD_TYPE=Release -G "Visual Studio 17" -D CMAKE_GENERATOR_TOOLSET=v141 -D LIBRARY_TYPE=${{ env.LIBRARY_TYPE }} -D Qt5_DIR="Qt-Win-${{ env.LIBRARY_TYPE }}/Qt-5.15.18/lib/cmake/Qt5"
         cmake --build build --config Release
+        dir /s build
         copy /y /v build\Release\*.lib upload\lib
         
     - name: Upload artifact
