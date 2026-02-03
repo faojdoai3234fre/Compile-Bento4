@@ -1,0 +1,50 @@
+name: Linux Build Shared
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  LIBRARY_TYPE: SHARED
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download dependencies
+      run: |
+        git clone https://github.com/${{ github.actor }}/Qt-Linux-${{ env.LIBRARY_TYPE }}
+        
+    - name: Prepare library
+      run: |
+        mkdir -p upload/include/Bento4
+        mkdir -p upload/lib
+        mkdir temp
+        git clone https://github.com/axiomatic-systems/Bento4
+        cp -r src/. temp
+        cp -r Bento4/Source/C++/Core/. src
+        cp -r Bento4/Source/C++/Codecs/. src
+        cp -r Bento4/Source/C++/Crypto/. src
+        cp -r Bento4/Source/C++/MetaData/. src
+        cp -r temp/. src
+
+    - name: Build library
+      run: |
+        cmake -B build -D CMAKE_BUILD_TYPE=Release -D LIBRARY_TYPE=${{ env.LIBRARY_TYPE }} -D Qt5_DIR="Qt-Linux-${{ env.LIBRARY_TYPE }}/Qt-5.15.18/lib/cmake/Qt5"
+        cmake --build build --config Release
+        cp -r include/. upload/include/Bento4
+        cp build/*.a upload/lib
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux-artifact
+        path: ${{github.workspace}}/upload
+        if-no-files-found: ignore
+        retention-days: 0
