@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.19 )
 
-if ( NOT DEFINED LIBRARY_TYPE )
+if( NOT DEFINED LIBRARY_TYPE )
   message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either SHARED or STATIC." )
 endif()
 
