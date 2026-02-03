@@ -1,7 +1,10 @@
 cmake_minimum_required( VERSION 3.19 )
 
+if ( NOT DEFINED LIBRARY_TYPE )
+  message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either SHARED or STATIC." )
+endif()
+
 set( LIBRARY_NAME Bento4 )
-set( LIBRARY_TYPE SHARED )
 
 project( ${LIBRARY_NAME} CXX )
 
