@@ -1,7 +1,7 @@
 #ifndef _BENTO4_H
 #define _BENTO4_H
 
-#include <QtCore/qbytearray.h>
+//#include <QtCore/qbytearray.h>
 
 // A class for working with ISO-MP4 files.
 class Bento4 final {
