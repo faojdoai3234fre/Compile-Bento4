@@ -1,6 +1,8 @@
 #ifndef _BENTO4_H
 #define _BENTO4_H
 
+#include <cstdint>
+
 class QByteArray;
 class QString;
 
