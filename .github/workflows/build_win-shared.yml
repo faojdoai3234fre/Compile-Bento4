@@ -52,10 +52,12 @@ jobs:
         cmake --build build --config Debug
         copy /y /v build\Debug\Bento4.lib upload\lib\Bento4d.lib
         copy /y /v build\Debug\Bento4.pdb upload\lib\Bento4d.pdb
+        copy /y /v build\Debug\Bento4.dll upload\lib\Bento4d.dll
         rmdir /s /q build
         cmake -B build -D CMAKE_BUILD_TYPE=Release -G "Visual Studio 17" -D CMAKE_GENERATOR_TOOLSET=v141 -D LIBRARY_TYPE=${{ env.LIBRARY_TYPE }} -D Qt5_DIR="Qt-Win-${{ env.LIBRARY_TYPE }}/Qt-5.15.18/lib/cmake/Qt5"
         cmake --build build --config Release
         copy /y /v build\Release\*.lib upload\lib
+        copy /y /v build\Release\*.dll upload\lib
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
