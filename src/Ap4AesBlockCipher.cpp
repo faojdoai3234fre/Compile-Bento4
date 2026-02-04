@@ -1964,26 +1964,8 @@ AP4_AesCtrBlockCipher::Process(const AP4_UI08* input,
     return AP4_SUCCESS;
 }
 
-#if AP4_AES_BLOCK_SIZE == 16 && AP4_AES_KEY_LENGTH == 16 && defined(__AES__) && defined(__SSE4_2__)
-#define AP4_ENABLE_AESNI
-
 #include <immintrin.h>
 
-#define cpuid(func,ax,bx,cx,dx)\
-  __asm__ __volatile__ ("cpuid":\
-  "=a" (ax), "=b" (bx), "=c" (cx), "=d" (dx) : "a" (func));
-
-static bool g_SupportAesNI = false;
-__attribute__((constructor)) static void detect_aesni()
-{
-  unsigned int a,b,c,d;
-  cpuid(1, a,b,c,d);
-  g_SupportAesNI = c & 0x2000000;
-}
-
-#endif
-
-#ifdef AP4_ENABLE_AESNI
 template <AP4_Size NB>
 static void aesni_process_NB_blocks(AP4_UI08* Out, AP4_UI08 const* In, __m128i& CB, AP4_UI08 const* Keys)
 {
@@ -2106,7 +2088,6 @@ AP4_Result AP4_AesNICtrBlockCipher::Process(const AP4_UI08* input,
   process(output, input, input_size, iv, (const AP4_UI08*) &m_Context->k_sch[0]);
   return AP4_SUCCESS;
 }
-#endif // AP4_ENABLE_AESNI
 
 /*----------------------------------------------------------------------
 |   AP4_AesBlockCipher::Create

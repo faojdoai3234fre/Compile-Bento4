@@ -1,0 +1,66 @@
+name: Windows Build Static
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  LIBRARY_TYPE: STATIC
+  
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download dependencies
+      run: |
+        git clone https://github.com/${{ github.actor }}/Qt-Win-${{ env.LIBRARY_TYPE }}
+        
+    - name: Install Visual Studio toolchain
+      shell: cmd
+      run: |
+        "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\setup.exe" modify --quiet --norestart --includeRecommended --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" --channelId VisualStudio.15.Release --add Microsoft.VisualStudio.Component.VC.v141.x86.x64
+        
+    - name: Prepare library
+      shell: cmd
+      run: |
+        mkdir temp
+        mkdir upload\lib
+        mkdir upload\include\Bento4
+        git clone https://github.com/axiomatic-systems/Bento4
+        copy src\*.cpp temp
+        copy /y /v "Bento4\Source\C++\Core\*.h" src
+        copy /y /v "Bento4\Source\C++\Core\*.cpp" src
+        copy /y /v "Bento4\Source\C++\Codecs\*.h" src
+        copy /y /v "Bento4\Source\C++\Codecs\*.cpp" src
+        copy /y /v "Bento4\Source\C++\Crypto\*.h" src
+        copy /y /v "Bento4\Source\C++\Crypto\*.cpp" src
+        copy /y /v "Bento4\Source\C++\MetaData\*.h" src
+        copy /y /v "Bento4\Source\C++\MetaData\*.cpp" src
+        copy /y /v temp\*.cpp src
+        copy /y /v include upload\include\Bento4
+        
+    - name: Build library
+      shell: cmd
+      run: |
+        cmake -B build -D CMAKE_BUILD_TYPE=Debug -G "Visual Studio 17" -D CMAKE_GENERATOR_TOOLSET=v141 -D LIBRARY_TYPE=${{ env.LIBRARY_TYPE }} -D Qt5_DIR="Qt-Win-${{ env.LIBRARY_TYPE }}/Qt-5.15.18/lib/cmake/Qt5"
+        cmake --build build --config Debug
+        copy /y /v build\Debug\Bento4.lib upload\lib\Bento4d.lib
+        copy /y /v build\Debug\Bento4.pdb upload\lib\Bento4d.pdb
+        rmdir /s /q build
+        cmake -B build -D CMAKE_BUILD_TYPE=Release -G "Visual Studio 17" -D CMAKE_GENERATOR_TOOLSET=v141 -D LIBRARY_TYPE=${{ env.LIBRARY_TYPE }} -D Qt5_DIR="Qt-Win-${{ env.LIBRARY_TYPE }}/Qt-5.15.18/lib/cmake/Qt5"
+        cmake --build build --config Release
+        copy /y /v build\Release\*.lib upload\lib
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-artifact
+        path: ${{github.workspace}}/uploada
+        if-no-files-found: ignore
+        retention-days: 0
