@@ -1,7 +1,7 @@
 #include "Ap4CommonEncryption.h"
 #include "Bento4.hpp"
 
-#include <QtCore/qstring.h>
+#include <QtCore/qbytearray.h>
 
 bool Bento4::decrypt(QByteArray& data, const QString& keyId, const QString& key) noexcept {
 
