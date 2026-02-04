@@ -2,6 +2,7 @@
 #include "Bento4.hpp"
 
 #include <QtCore/qbytearray.h>
+#include <QtCore/qstring.h>
 
 bool Bento4::decrypt(QByteArray& data, const QString& keyId, const QString& key) noexcept {
 
