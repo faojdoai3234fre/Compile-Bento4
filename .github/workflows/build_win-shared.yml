@@ -63,6 +63,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Windows-artifact
-        path: ${{github.workspace}}/upload
+        path: ${{github.workspace}}/uploada
         if-no-files-found: ignore
         retention-days: 0
