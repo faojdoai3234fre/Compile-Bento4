@@ -1179,7 +1179,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
     if (cursors.ItemCount() == 0) {
         input_stream->Release();
 		output_stream->Release();
-        delete cursor;
 		return false;
     }
     
@@ -1190,7 +1189,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
             } else {
                 input_stream->Release();
         		output_stream->Release();
-                delete cursor;
         		return false;
             }
         } else if (!strncmp("video", track_selector, 5)) {
@@ -1199,7 +1197,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
             } else {
                 input_stream->Release();
         		output_stream->Release();
-                delete cursor;
         		return false;
             }
         } else if (!strncmp("subtitles", track_selector, 9)) {
@@ -1208,7 +1205,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
             } else {
                 input_stream->Release();
         		output_stream->Release();
-                delete cursor;
         		return false;
             }
         } else {
@@ -1222,7 +1218,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
             if (!selected_track) {
                 input_stream->Release();
         		output_stream->Release();
-                delete cursor;
         		return false;
             }
         }
@@ -1231,7 +1226,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
     if (video_track_count == 0 && audio_track_count == 0 && subtitles_track_count == 0) {
         input_stream->Release();
 		output_stream->Release();
-        delete cursor;
 		return false;
     }
     AP4_AvcSampleDescription* avc_desc = NULL;
@@ -1244,7 +1238,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
         if (avc_desc == NULL) {
             input_stream->Release();
     		output_stream->Release();
-            delete cursor;
     		return false;
         }
     }
@@ -1327,7 +1320,6 @@ bool Bento4::fragment(QByteArray& data) noexcept {
 	}
     
     // cleanup and exit
-    delete cursor;
     if (input_stream)  input_stream->Release();
     if (output_stream) output_stream->Release();
 
