@@ -1,6 +1,8 @@
 #include "Ap4.h"
 #include "Bento4.hpp"
 
+#include <ctime>
+
 #include <QtCore/qstring.h>
 
 /*----------------------------------------------------------------------
