@@ -1,7 +1,10 @@
 #ifndef _BENTO4_H
 #define _BENTO4_H
 
-#include <QtCore/qbytearray.h>
+#include <cstdint>
+
+class QByteArray;
+class QString;
 
 // A class for working with ISO-MP4 files.
 class Bento4 final {
@@ -27,6 +30,11 @@ public:
 	/// <param name="key">The decryption key. The key must be hex-encoded and 16 bytes long (32 characters).</param>
 	/// <returns>True if the operation succeeded, false otherwise.</returns>
 	static bool decrypt(QByteArray& data, const uint64_t trackId, const QString& key) noexcept;
+
+	/// <summary>Create a fragmented MP4 file from a non-fragmented one or re-fragments an already fragmented file.</summary>
+	/// <param name="data">The MP4 file to fragment. The fragmented data will be stored in this byte array. If the fragmentation fails, the original data is untouched.</param>
+	/// <returns>True if the operation succeeded, false otherwise.</returns>
+	static bool fragment(QByteArray& data) noexcept;
 
 private:
 	// Prevent the class from being instantiated on the heap.
