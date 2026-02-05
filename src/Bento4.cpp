@@ -3,6 +3,7 @@
 
 #include <ctime>
 
+#include <QtCore/qbytearray.h>
 #include <QtCore/qstring.h>
 
 /*----------------------------------------------------------------------
