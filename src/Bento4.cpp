@@ -1324,3 +1324,4 @@ bool Bento4::fragment(QByteArray& data) noexcept {
     if (output_stream) output_stream->Release();
 
     return AP4_SUCCEEDED(result) ? true : false;
+}
