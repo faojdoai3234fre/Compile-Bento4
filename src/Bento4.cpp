@@ -1093,3 +1093,245 @@ bool Bento4::decrypt(QByteArray& data, const uint64_t trackId, const QString& ke
 
   return true;
 }
+
+bool Bento4::fragment(QByteArray& data) noexcept {
+    
+    // Init the variables
+    const char*  track_selector                = NULL;
+    unsigned int fragment_duration             = 0;
+    bool         auto_detect_fragment_duration = true;
+    bool         create_segment_index          = false;
+    bool         copy_udta                     = false;
+    bool         trun_version_one              = true;
+    AP4_UI32     timescale                     = 0;
+    AP4_Result   result;
+
+    Options.trim                  = false;
+    Options.no_tfdt               = false;
+    Options.tfdt_start            = 0.0;
+    Options.sequence_number_start = 1;
+    Options.force_i_frame_sync    = AP4_FRAGMENTER_FORCE_SYNC_MODE_NONE;
+    
+    AP4_MemoryByteStream* input_stream = new AP4_MemoryByteStream(reinterpret_cast<const uint8_t*>(data.constData()), data.size());
+	AP4_MemoryByteStream* output_stream = new AP4_MemoryByteStream();
+
+    // parse the input MP4 file (moov only)
+    AP4_File input_file(*input_stream, true);
+    
+    // check the file for basic properties
+    if (input_file.GetMovie() == NULL) {
+        input_stream->Release();
+		output_stream->Release();
+		return false;
+    }
+    
+    // create a cusor list to keep track of the tracks we will read from
+    AP4_Array<TrackCursor*> cursors;
+    
+    // iterate over all tracks
+    TrackCursor*  video_track           = NULL;
+    TrackCursor*  audio_track           = NULL;
+    TrackCursor*  subtitles_track       = NULL;
+    TrackCursor*  selected_track        = NULL;
+    unsigned int  video_track_count     = 0;
+    unsigned int  audio_track_count     = 0;
+    unsigned int  subtitles_track_count = 0;
+    for (AP4_List<AP4_Track>::Item* track_item = input_file.GetMovie()->GetTracks().FirstItem();
+                                    track_item;
+                                    track_item = track_item->GetNext()) {
+        AP4_Track* track = track_item->GetData();
+
+        // sanity check
+        if (track->GetSampleCount() == 0 && !input_file.GetMovie()->HasFragments()) {
+            continue;
+        }
+
+        // create a sample array for this track
+        SampleArray* sample_array;
+        if (input_file.GetMovie()->HasFragments()) {
+            sample_array = new CachedSampleArray(track);
+        } else {
+            sample_array = new SampleArray(track);
+        }
+
+        // create a cursor for the track
+        TrackCursor* cursor = new TrackCursor(track, sample_array);
+        cursor->m_Tfra->SetTrackId(track->GetId());
+        cursors.Append(cursor);
+
+        if (track->GetType() == AP4_Track::TYPE_VIDEO) {
+            if (video_track) {
+                // WARNING: more than one video track found.
+            } else {
+                video_track = cursor;
+            }
+            video_track_count++;
+        } else if (track->GetType() == AP4_Track::TYPE_AUDIO) {
+            if (audio_track == NULL) {
+                audio_track = cursor;
+            }
+            audio_track_count++;
+        } else if (track->GetType() == AP4_Track::TYPE_SUBTITLES) {
+            if (subtitles_track == NULL) {
+                subtitles_track = cursor;
+            }
+            subtitles_track_count++;
+        }
+    }
+
+    if (cursors.ItemCount() == 0) {
+        input_stream->Release();
+		output_stream->Release();
+        delete cursor;
+		return false;
+    }
+    
+    if (track_selector) {
+        if (!strncmp("audio", track_selector, 5)) {
+            if (audio_track) {
+                selected_track = audio_track;
+            } else {
+                input_stream->Release();
+        		output_stream->Release();
+                delete cursor;
+        		return false;
+            }
+        } else if (!strncmp("video", track_selector, 5)) {
+            if (video_track) {
+                selected_track = video_track;
+            } else {
+                input_stream->Release();
+        		output_stream->Release();
+                delete cursor;
+        		return false;
+            }
+        } else if (!strncmp("subtitles", track_selector, 9)) {
+            if (subtitles_track) {
+                selected_track = subtitles_track;
+            } else {
+                input_stream->Release();
+        		output_stream->Release();
+                delete cursor;
+        		return false;
+            }
+        } else {
+            AP4_UI32 selected_track_id = (AP4_UI32)strtol(track_selector, NULL, 10);
+            for (unsigned int i=0; i<cursors.ItemCount(); i++) {
+                if (cursors[i]->m_Track->GetId() == selected_track_id) {
+                    selected_track = cursors[i];
+                    break;
+                }
+            }
+            if (!selected_track) {
+                input_stream->Release();
+        		output_stream->Release();
+                delete cursor;
+        		return false;
+            }
+        }
+    }
+    
+    if (video_track_count == 0 && audio_track_count == 0 && subtitles_track_count == 0) {
+        input_stream->Release();
+		output_stream->Release();
+        delete cursor;
+		return false;
+    }
+    AP4_AvcSampleDescription* avc_desc = NULL;
+    if (video_track && (Options.force_i_frame_sync != AP4_FRAGMENTER_FORCE_SYNC_MODE_NONE)) {
+        // that feature is only supported for AVC
+        AP4_SampleDescription* sdesc = video_track->m_Track->GetSampleDescription(0);
+        if (sdesc) {
+            avc_desc = AP4_DYNAMIC_CAST(AP4_AvcSampleDescription, sdesc);
+        }
+        if (avc_desc == NULL) {
+            input_stream->Release();
+    		output_stream->Release();
+            delete cursor;
+    		return false;
+        }
+    }
+    
+    // remember where the stream was
+    AP4_Position position;
+    input_stream->Tell(position);
+
+    // for fragmented input files, we need to populate the sample arrays
+    if (input_file.GetMovie()->HasFragments()) {
+        AP4_LinearReader reader(*input_file.GetMovie(), input_stream);
+        for (unsigned int i=0; i<cursors.ItemCount(); i++) {
+            reader.EnableTrack(cursors[i]->m_Track->GetId());
+        }
+        AP4_UI32 track_id;
+        AP4_Sample sample;
+        do {
+            result = reader.GetNextSample(sample, track_id);
+            if (AP4_SUCCEEDED(result)) {
+                for (unsigned int i=0; i<cursors.ItemCount(); i++) {
+                    if (cursors[i]->m_Track->GetId() == track_id) {
+                        cursors[i]->m_Samples->AddSample(sample);
+                        break;
+                    }
+                }
+            }
+        } while (AP4_SUCCEEDED(result));
+        
+    } else if (video_track && (Options.force_i_frame_sync != AP4_FRAGMENTER_FORCE_SYNC_MODE_NONE)) {
+        AP4_Sample sample;
+        if (Options.force_i_frame_sync == AP4_FRAGMENTER_FORCE_SYNC_MODE_AUTO) {
+            // detect if this looks like an open-gop source
+            for (unsigned int i=1; i<video_track->m_Samples->GetSampleCount(); i++) {
+                if (AP4_SUCCEEDED(video_track->m_Samples->GetSample(i, sample))) {
+                    if (sample.IsSync()) {
+                        // we found a sync i-frame, assume this is *not* an open-gop source
+                        Options.force_i_frame_sync = AP4_FRAGMENTER_FORCE_SYNC_MODE_NONE;
+                        break;
+                    }
+                }
+            }
+        }
+        if (Options.force_i_frame_sync != AP4_FRAGMENTER_FORCE_SYNC_MODE_NONE) {
+            for (unsigned int i=0; i<video_track->m_Samples->GetSampleCount(); i++) {
+                if (AP4_SUCCEEDED(video_track->m_Samples->GetSample(i, sample))) {
+                    if (IsIFrame(sample, avc_desc)) {
+                        video_track->m_Samples->ForceSync(i);
+                    }
+                }
+            }
+        }
+    }
+
+    // return the stream to its original position
+    input_stream->Seek(position);
+
+    // auto-detect the fragment duration if needed
+    if (auto_detect_fragment_duration) {
+        if (video_track) {
+            fragment_duration = AutoDetectFragmentDuration(video_track);
+        } else if (audio_track && input_file.GetMovie()->HasFragments()) {
+            fragment_duration = AutoDetectAudioFragmentDuration(*input_stream, audio_track);
+        }
+        if (fragment_duration == 0) {
+            fragment_duration = AP4_FRAGMENTER_DEFAULT_FRAGMENT_DURATION;
+        } else if (fragment_duration > AP4_FRAGMENTER_MAX_AUTO_FRAGMENT_DURATION) {
+            fragment_duration = AP4_FRAGMENTER_DEFAULT_FRAGMENT_DURATION;
+        }
+    }
+    
+    // fragment the file
+    AP4_Array<TrackCursor*> tracks_to_fragment;
+    if (selected_track) {
+        tracks_to_fragment.Append(selected_track);
+    } else {
+        tracks_to_fragment = cursors;
+    }
+    if (result = Fragment(input_file, *output_stream, tracks_to_fragment, fragment_duration, timescale, create_segment_index, copy_udta, trun_version_one); AP4_SUCCEEDED(result)) {
+		data = QByteArray(reinterpret_cast<const char*>(output_stream->GetData()), output_stream->GetDataSize());
+	}
+    
+    // cleanup and exit
+    delete cursor;
+    if (input_stream)  input_stream->Release();
+    if (output_stream) output_stream->Release();
+
+    return AP4_SUCCEEDED(result) ? true : false;
