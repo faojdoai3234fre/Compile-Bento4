@@ -272,8 +272,7 @@ Fragment(AP4_File&                input_file,
         
         result = cursors[i]->Init();
         if (AP4_FAILED(result)) {
-            fprintf(stderr, "ERROR: failed to init sample cursor (%d), skipping track %d\n", result, track->GetId());
-            return;
+            return AP4_FAILURE;
         }
 
         // create a sample table (with no samples) to hold the sample description
