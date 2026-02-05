@@ -866,10 +866,6 @@ AutoDetectFragmentDuration(TrackCursor* cursor)
             // found a pattern
             AP4_UI64 duration = sample.GetDts();
             double fps = (double)(interval*(sync_count-1))/((double)duration/(double)cursor->m_Track->GetMediaTimeScale());
-            if (Options.verbosity > 0) {
-                printf("found regular I-frame interval: %d frames (at %.3f frames per second)\n",
-                       interval, (float)fps);
-            }
             return (unsigned int)(1000.0*(double)interval/fps);
         }
     }
