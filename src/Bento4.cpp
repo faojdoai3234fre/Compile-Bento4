@@ -231,7 +231,7 @@ public:
 +---------------------------------------------------------------------*/
 static AP4_Result
 Fragment(AP4_File&                input_file,
-         AP4_ByteStream&          output_stream,
+         AP4_MemoryByteStream&          output_stream,
          AP4_Array<TrackCursor*>& cursors,
          AP4_UI32                 fragment_duration,
          AP4_UI32                 timescale,
@@ -749,18 +749,21 @@ Fragment(AP4_File&                input_file,
             // get the sample
             result = fragment->m_Samples->GetSample(fragment->m_SampleIndexes[i], sample);
             if (AP4_FAILED(result)) {
+                output_stream.Release();
                 return AP4_FAILURE;
             }
 
             // read the sample data
             result = sample.ReadData(sample_data);
             if (AP4_FAILED(result)) {
+                output_stream.Release();
                 return AP4_FAILURE;
             }
             
             // write the sample data
             result = output_stream.Write(sample_data.GetData(), sample_data.GetDataSize());
             if (AP4_FAILED(result)) {
+                output_stream.Release();
                 return AP4_FAILURE;
             }
         }
@@ -800,6 +803,7 @@ Fragment(AP4_File&                input_file,
     mfra.AddChild(mfro);
     result = mfra.Write(output_stream);
     if (AP4_FAILED(result)) {
+        output_stream.Release();
         return AP4_FAILURE;
     }
     
