@@ -10,7 +10,7 @@ elseif( ${LIBRARY_TYPE} MATCHES "Static" OR ${LIBRARY_TYPE} MATCHES "static" )
   set( LIBRARY_TYPE STATIC )
 endif()
 
-if( NOT ${LIBRARY_TYPE} MATCHES "SHARED" OR NOT ${LIBRARY_TYPE} MATCHES "STATIC" )
+if( NOT ${LIBRARY_TYPE} MATCHES "SHARED" AND NOT ${LIBRARY_TYPE} MATCHES "STATIC" )
   message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either Shared or Static. The variable was set to ${LIBRARY_TYPE}." )
 endif()
 
