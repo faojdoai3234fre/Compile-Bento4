@@ -1,7 +1,17 @@
 cmake_minimum_required( VERSION 3.19 )
 
 if( NOT DEFINED LIBRARY_TYPE )
-  message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either SHARED or STATIC." )
+  message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either Shared or Static." )
+endif()
+
+if( ${LIBRARY_TYPE} MATCHES "Shared" OR ${LIBRARY_TYPE} MATCHES "shared" )
+  set( LIBRARY_TYPE SHARED )
+elseif( ${LIBRARY_TYPE} MATCHES "Static" OR ${LIBRARY_TYPE} MATCHES "static" )
+  set( LIBRARY_TYPE STATIC )
+endif()
+
+if( NOT ${LIBRARY_TYPE} MATCHES "SHARED" AND NOT ${LIBRARY_TYPE} MATCHES "STATIC" )
+  message( FATAL_ERROR "You must set the variable LIBRARY_TYPE to either Shared or Static. The variable was set to ${LIBRARY_TYPE}." )
 endif()
 
 set( LIBRARY_NAME Bento4 )
